@@ -1,0 +1,28 @@
+# Unity's rebuildable caches and per-machine files (Unity recreates these when the project is opened)
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Bb]uild/
+/[Bb]uilds/
+/[Mm]emoryCaptures/
+# The local web build; the published copy that GitHub Pages serves lives in docs/
+/WebBuild/
+*.csproj
+*.sln
+*.slnx
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+.vs/
+.vscode/
+.idea/
+.DS_Store
+sysinfo.txt
+crashlytics-build.properties

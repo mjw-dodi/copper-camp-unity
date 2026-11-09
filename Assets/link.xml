@@ -1,0 +1,10 @@
+<!-- Keeps the collider classes that Unity's simple shapes (cubes, spheres, capsules, quads) add when they are created,
+     so the web build's code stripping doesn't log "class doesn't exist" errors at start-up. -->
+<linker>
+  <assembly fullname="UnityEngine.PhysicsModule">
+    <type fullname="UnityEngine.BoxCollider" preserve="all"/>
+    <type fullname="UnityEngine.SphereCollider" preserve="all"/>
+    <type fullname="UnityEngine.CapsuleCollider" preserve="all"/>
+    <type fullname="UnityEngine.MeshCollider" preserve="all"/>
+  </assembly>
+</linker>

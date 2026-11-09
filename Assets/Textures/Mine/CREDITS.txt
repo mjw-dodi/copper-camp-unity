@@ -1,0 +1,4 @@
+Mine textures from Poly Haven (polyhaven.com), all CC0 (public domain, no attribution required). Credited anyway:
+dark_rock, dark_rock_02 - Amal Kumar
+rocks_ground_02, rough_wood - Rob Tuytel
+weathered_planks - Dario Barresi, Dimitrios Savva
