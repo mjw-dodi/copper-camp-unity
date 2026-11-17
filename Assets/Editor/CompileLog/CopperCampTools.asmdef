@@ -1,7 +1,9 @@
 {
     "name": "CopperCampTools",
     "rootNamespace": "",
-    "references": [],
+    "references": [
+        "CopperCamp"
+    ],
     "includePlatforms": ["Editor"],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

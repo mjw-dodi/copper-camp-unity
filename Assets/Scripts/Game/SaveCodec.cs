@@ -38,6 +38,7 @@ namespace CopperCamp
             W("job", S.jobId ?? ""); W("phase", S.phase); W("shifts", S.shifts); W("slots", S.slots); W("seasonPay", S.seasonPay);
             W("tip", S.tip ?? ""); W("tipTurn", S.tipTurn); W("payTip", S.payTip ?? ""); W("payTipTurn", S.payTipTurn);
             W("bossName", S.bossName ?? ""); W("pendingPlace", S.pendingPlace ?? "");
+            W("bestSeasonPay", S.bestSeasonPay); W("bestLoads", S.bestLoads);
             foreach (var l in S.log) W("log", l);
             foreach (var kv in S.flags.d) W("f:" + kv.Key, kv.Value);
             foreach (var kv in S.rel) W("r:" + kv.Key, kv.Value);
@@ -93,6 +94,8 @@ namespace CopperCamp
                     case "payTipTurn": S.payTipTurn = In(v); break;
                     case "bossName": S.bossName = v; break;
                     case "pendingPlace": S.pendingPlace = Ns(v); break;
+                    case "bestSeasonPay": S.bestSeasonPay = In(v); break;
+                    case "bestLoads": S.bestLoads = In(v); break;
                     case "log": S.log.Add(v); break;
                     case "u": S.used.Add(v); break;
                     case "b": S.brkRecent.Add(v); break;

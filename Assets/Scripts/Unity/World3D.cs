@@ -888,7 +888,7 @@ namespace CopperCamp
             var curPos = Vector3.Lerp(cam.transform.position, camPos, k);
             var curLook = Vector3.Lerp(cam.transform.position + cam.transform.forward * 10, camLook, k);
             if (k >= 1) curLook = camLook;
-            cam.transform.position = curPos + (shake > 0 ? Random.insideUnitSphere * shake * .06f : Vector3.zero);
+            cam.transform.position = curPos + (!Settings.ReducedMotion && shake > 0 ? Random.insideUnitSphere * shake * .06f : Vector3.zero);
             cam.transform.LookAt(curLook);
         }
 

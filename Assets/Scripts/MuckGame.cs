@@ -242,7 +242,7 @@ namespace CopperCamp
 
         void ShakeCamera(float dt)
         {
-            if (viewCamera == null) return;
+            if (viewCamera == null || Settings.ReducedMotion) return;
             if (shake > 0f)
             {
                 shake = Mathf.Max(0f, shake - dt);

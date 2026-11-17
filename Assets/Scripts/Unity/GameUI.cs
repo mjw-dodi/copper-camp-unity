@@ -36,22 +36,22 @@ namespace CopperCamp
         public bool Walking;
 
         // ---------------- palette ----------------
-        static readonly Color C_PANEL = Hex("#16100c", .92f);
-        static readonly Color C_TEXT = Hex("#e8dcc4");
-        static readonly Color C_SOFT = Hex("#b49a7c");
-        static readonly Color C_COPPER = Hex("#c87533");
-        static readonly Color C_BRASS = Hex("#d9a441");
-        static readonly Color C_VERDI = Hex("#6f9a8d");
-        static readonly Color C_BLOOD = Hex("#aa3333");
-        static readonly Color C_BTN = Hex("#2a1f18");
-        static readonly Color C_BTN_HI = Hex("#3d2d22");
-        static readonly Color C_BTN_DN = Hex("#4d3727");
-        static readonly Color C_RULE = Hex("#5a4636");
-        static readonly Color C_TRACK = Hex("#2e241d");
-        static readonly Color C_HUD = Hex("#120d0a", .86f);
-        static readonly Color C_WHO = Hex("#d9c9a8");
-        static readonly Color C_MAIN_DN = Hex("#8b4418");
-        static readonly Color C_MAIN_EDGE = Hex("#6b3a18");
+        static Color C_PANEL => Settings.HighContrast ? Hex("#0a0806", .98f) : Hex("#16100c", .92f);
+        static Color C_TEXT => Settings.HighContrast ? Hex("#ffffff") : Hex("#e8dcc4");
+        static Color C_SOFT => Settings.HighContrast ? Hex("#d4c4a8") : Hex("#b49a7c");
+        static Color C_COPPER => Settings.HighContrast ? Hex("#ff9a3c") : Hex("#c87533");
+        static Color C_BRASS => Settings.HighContrast ? Hex("#ffd24a") : Hex("#d9a441");
+        static Color C_VERDI => Settings.HighContrast ? Hex("#7fe8c0") : Hex("#6f9a8d");
+        static Color C_BLOOD => Settings.HighContrast ? Hex("#ff5544") : Hex("#aa3333");
+        static Color C_BTN => Settings.HighContrast ? Hex("#1a1512") : Hex("#2a1f18");
+        static Color C_BTN_HI => Settings.HighContrast ? Hex("#3a2c22") : Hex("#3d2d22");
+        static Color C_BTN_DN => Settings.HighContrast ? Hex("#4d3828") : Hex("#4d3727");
+        static Color C_RULE => Settings.HighContrast ? Hex("#8a6a50") : Hex("#5a4636");
+        static Color C_TRACK => Settings.HighContrast ? Hex("#1a1512") : Hex("#2e241d");
+        static Color C_HUD => Settings.HighContrast ? Hex("#050403", .95f) : Hex("#120d0a", .86f);
+        static Color C_WHO => Settings.HighContrast ? Hex("#ffe8c0") : Hex("#d9c9a8");
+        static Color C_MAIN_DN => Settings.HighContrast ? Hex("#cc5522") : Hex("#8b4418");
+        static Color C_MAIN_EDGE => Settings.HighContrast ? Hex("#994422") : Hex("#6b3a18");
         const string GOOD = "#7fc0ac", BAD = "#e8806c", NOTE = "#b49a7c", KEYNUM = "#8f7b64";
 
         const int BODY = 17, TITLE = 26, BTN_T = 18, BTN_D = 14;
@@ -61,7 +61,7 @@ namespace CopperCamp
         // ---------------- widgets ----------------
         Font font;
         bool panelVisible = true;
-        GameObject panelRoot, hudRoot, captionRoot, normalRoot, shiftRoot, phaseRow, cardRow, nameRow, timerRoot, ledgerRoot;
+        GameObject panelRoot, hudRoot, captionRoot, normalRoot, shiftRoot, phaseRow, cardRow, nameRow, timerRoot, ledgerRoot, settingsBtnGo;
         ScrollRect scroll;
         RectTransform content, choicesRoot, sBtnRoot;
         Text moneyText, skillText, whoText, captionText, titleText, deltaText, bodyText, cardName, cardBody, initialsText;
@@ -98,6 +98,7 @@ namespace CopperCamp
 
         // ---------------- audio ----------------
         bool soundOn = true;
+        float textScale = 1f;
         AudioSource sfxSrc;
         XFade ambX, musicX;
         readonly Dictionary<string, Voice> loops = new Dictionary<string, Voice>();
@@ -144,6 +145,8 @@ namespace CopperCamp
             CC.ShiftView = ShowShift;
             font = Resources.Load<Font>("CC/font/DejaVuSerif");   // open-licensed (DejaVu): has the dashes and curly quotes the story text uses
             if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            Settings.Load();
+            textScale = Settings.TextScale;
             soundOn = PlayerPrefs.GetInt(SND_KEY, 1) != 0;
             EnsureEventSystem();
             BuildUI();
@@ -214,6 +217,8 @@ namespace CopperCamp
 
             if (shiftMode && CC.Shift != null) UpdateShift(CC.Shift);
 
+            if (settingsBtnGo != null) settingsBtnGo.SetActive(CC.Shift == null && !CC.TitleMode);
+
             hudClock -= dt;
             if (hudClock <= 0f) { hudClock = .25f; RefreshHud(); }
             RefreshCaption();
@@ -283,7 +288,7 @@ namespace CopperCamp
             if (!soundOn || string.IsNullOrEmpty(name) || sfxSrc == null) return;
             if (name == "thud") name = "throwrock";
             var c = Clip(name);
-            if (c != null) sfxSrc.PlayOneShot(c, .9f);
+            if (c != null) sfxSrc.PlayOneShot(c, .9f * Settings.SfxVolume);
         }
 
         public void SaveText(string text)
@@ -296,6 +301,14 @@ namespace CopperCamp
         public string LoadText() => PlayerPrefs.HasKey(SAVE_KEY) ? PlayerPrefs.GetString(SAVE_KEY) : null;
 
         public string AskName() => nameField != null && nameField.text != null ? nameField.text.Trim() : "";
+
+        public void RebuildUI()
+        {
+            textScale = Settings.TextScale;
+            var old = transform.Find("CopperCampUI");
+            if (old != null) Destroy(old.gameObject);
+            BuildUI();
+        }
 
         // =====================================================================
         // the shift panel (JS mountUI + the per-frame part of runShift)
@@ -582,6 +595,8 @@ namespace CopperCamp
             prevSnap = now;
             if (prev == null) return "";
             string[] labels = { "$", "Health", "Lungs", "Spirits", "Standing", "Suspicion" };
+            string goodCol = Settings.Colorblind ? "#0072B2" : GOOD;
+            string badCol = Settings.Colorblind ? "#D55E00" : BAD;
             var sb = new StringBuilder();
             for (int i = 0; i < now.Length; i++)
             {
@@ -590,7 +605,7 @@ namespace CopperCamp
                 bool good = i == 5 ? d < 0 : d > 0;
                 string s = i == 0 ? (d > 0 ? "+$" : "−$") + Math.Abs(d) : labels[i] + " " + (d > 0 ? "+" : "−") + Math.Abs(d);
                 if (sb.Length > 0) sb.Append("    ");
-                sb.Append("<color=").Append(good ? GOOD : BAD).Append('>').Append(s).Append("</color>");
+                sb.Append("<color=").Append(good ? goodCol : badCol).Append('>').Append(s).Append("</color>");
             }
             return sb.ToString();
         }
@@ -639,7 +654,10 @@ namespace CopperCamp
         void SetChip(Chip c, float v, bool inv)
         {
             bool bad = inv ? v > 66 : v < 34, warn = inv ? v > 33 : v < 67;
-            c.fillImg.color = bad ? C_BLOOD : warn ? C_COPPER : C_VERDI;
+            Color good = Settings.Colorblind ? Hex("#0072B2") : C_VERDI;
+            Color warnCol = Settings.Colorblind ? Hex("#E69F00") : C_COPPER;
+            Color badCol = Settings.Colorblind ? Hex("#D55E00") : C_BLOOD;
+            c.fillImg.color = bad ? badCol : warn ? warnCol : good;
             SetFill(c.fill, v / 100f);
             c.num.text = CC.Round(v).ToString(CultureInfo.InvariantCulture);
         }
@@ -772,6 +790,20 @@ namespace CopperCamp
             Stretch(sndText.rectTransform, 0);
             sndText.text = "Sound: " + (soundOn ? "on" : "off");
             btn.onClick.AddListener(ToggleSound);
+
+            var sgo = Mk("Settings", R);
+            settingsBtnGo = sgo;
+            Place(sgo, Vector2.one, Vector2.one, new Vector2(-228, -31), new Vector2(-120, -5));
+            var simg = Img(sgo, Color.white, true);
+            AddOutline(sgo, C_BRASS, 1f);
+            var sbtn = sgo.AddComponent<Button>();
+            sbtn.targetGraphic = simg;
+            sbtn.colors = Tints(Hex("#120d0a", .6f), Hex("#3a2c14", .85f), Hex("#4a3818", .9f));
+            sbtn.navigation = new Navigation { mode = Navigation.Mode.None };
+            var st = MkText(sgo.transform, "Text", 14, C_BRASS, FontStyle.Normal, TextAnchor.MiddleCenter);
+            Stretch(st.rectTransform, 0);
+            st.text = "Settings";
+            sbtn.onClick.AddListener(() => { Deselect(); CC.SettingsPhase(); });
         }
 
         void BuildPanel(Transform R)
@@ -1012,20 +1044,21 @@ namespace CopperCamp
         {
             var sc = CC.scene;
             var U = CC.Shift;
+            float musicVol = Settings.MusicVolume;
             string amb = sc.mode == "under" || sc.mode == "dry" ? "amb_under"
                 : sc.mode == "inside" && (sc.inside == "mm" || sc.inside == "mercury") ? "amb_saloon" : "amb_wind";
-            ambX.Set(amb, amb == "amb_under" ? .8f : amb == "amb_saloon" ? .6f : .5f, Clip);
+            ambX.Set(amb, (amb == "amb_under" ? .8f : amb == "amb_saloon" ? .6f : .5f) * musicVol, Clip);
             // music, the way the browser game routes it: the title tune, a rag or a stomp in the M&M and on Mercury Street,
             // and the creek tune over the season's newspaper
             bool saloon = (sc.mode == "inside" && (sc.inside == "mm" || sc.inside == "mercury")) || (sc.mode == "hill" && (sc.focus == "mm" || sc.focus == "mercury"));
             if (!saloon) saloonTune = null; else if (saloonTune == null) saloonTune = UnityEngine.Random.value < .5f ? "music_rag" : "music_stomp";
             string tune = sc.mode == "photo" ? "music_ridge" : saloon ? saloonTune : paperShown ? "music_creek" : null;
-            musicX.Set(tune, tune == "music_ridge" ? .5f : tune == "music_creek" ? .4f : .34f, Clip);
+            musicX.Set(tune, (tune == "music_ridge" ? .5f : tune == "music_creek" ? .4f : .34f) * musicVol, Clip);
 
             bool run = U != null && !U.over && !U.paused;
-            Loop("drill", run && U.kind == "drill" && U.In("main") && U.stuck == 0 ? .55f : 0f);
-            Loop("tram", run && U.kind == "tram" && U.v > .05f ? .2f + .6f * U.v : 0f);
-            Loop("boots", sc.mode == "walk" && Walking ? .5f : 0f);
+            Loop("drill", run && U.kind == "drill" && U.In("main") && U.stuck == 0 ? .55f * Settings.SfxVolume : 0f);
+            Loop("tram", run && U.kind == "tram" && U.v > .05f ? (.2f + .6f * U.v) * Settings.SfxVolume : 0f);
+            Loop("boots", sc.mode == "walk" && Walking ? .5f * Settings.SfxVolume : 0f);
 
             ambX.Tick(dt);
             musicX.Tick(dt);
@@ -1164,7 +1197,7 @@ namespace CopperCamp
         Text MkText(Transform parent, string name, int size, Color col, FontStyle st = FontStyle.Normal, TextAnchor al = TextAnchor.UpperLeft)
         {
             var t = Mk(name, parent).AddComponent<Text>();
-            t.font = font; t.fontSize = size; t.color = col; t.fontStyle = st; t.alignment = al;
+            t.font = font; t.fontSize = Mathf.RoundToInt(size * textScale); t.color = col; t.fontStyle = st; t.alignment = al;
             t.supportRichText = true; t.lineSpacing = 1.08f; t.raycastTarget = false;
             t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Overflow;
             return t;

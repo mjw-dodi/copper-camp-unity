@@ -19,6 +19,7 @@ namespace CopperCamp
         public bool over, paused, breakDone;
         public string msg = "", note = "";
         public float pace = 1, boost = 1, sloppy = 0, payBonus = 1, risk;
+        public float heatMult = 1;
         public float[] warns;
         public int wi = 0, warnT = -1, pushed = 0, lastNoise = -999;
 
@@ -80,7 +81,7 @@ namespace CopperCamp
         public static bool GameHasMeter(string k) => k == "muck" || k == "hotmuck" || k == "timber";
         public static bool GameHasExtra(string k) => k == "drill" || k == "hotmuck";
 
-        static float ZoneW(ShiftState U) => Math.Max(.12f, .30f - U.fatigue * .14f - U.sloppy * .07f - U.heat * .12f);
+        static float ZoneW(ShiftState U) => Math.Max(.12f, .30f - U.fatigue * .14f - U.sloppy * .07f - U.heat * .12f + S.skill * .01f);
 
         /// <summary>The running shift, or null.</summary>
         public static ShiftState Shift;
@@ -96,6 +97,8 @@ namespace CopperCamp
                 warns = new[] { 140 + Rand() * 140, 420 + Rand() * 170, 760 + Rand() * 220 },
             };
             if (S.tip == j.id) { S.tip = null; U.note = "You went in ready for it."; }
+            ApplyShiftModifiers(U);
+            F.Set("recentAccident", false); // consumed: only affects the next shift
             GameInit(U);
             S.job = j; S.phase = "work";
             string pn = PersonName("partner");
@@ -104,9 +107,55 @@ namespace CopperCamp
                 : Pick(pn + " lights your candle off his. “Listen to the ground,” he says. He says it every shift.",
                        pn + " taps the back with his steel before you start. “She’s talking today.”",
                        "Your partner has saved you the dry side of the drift.");
+            if (!F.B("tut_" + kind))
+            {
+                F.Set("tut_" + kind, true);
+                U.note = (U.note.Length > 0 ? U.note + " " : "") + "<b>First time on this job?</b> " + GAME_HELP[kind];
+            }
             Sfx("cage");
             MountShift(U);
             Save();
+        }
+
+        /// <summary>Dynamic modifiers based on season, weather, health, skill, and recent accidents.</summary>
+        static void ApplyShiftModifiers(ShiftState U)
+        {
+            // winter cold slows the pace and makes the ground treacherous
+            if (S.season == 3)
+            {
+                U.pace *= .95f;
+                U.risk *= 1.1f;
+            }
+            // summer heat makes the hot box job worse
+            if (S.season == 1 && U.kind == "hotmuck")
+            {
+                U.heatMult *= 1.25f;
+            }
+            // low health means slower, riskier work
+            if (S.health < 40)
+            {
+                U.pace *= .9f;
+                U.risk *= 1.2f;
+            }
+            else if (S.health > 80)
+            {
+                U.pace *= 1.05f;
+            }
+            // high skill improves pace and reduces risk
+            float skillBonus = S.skill * .02f;
+            U.pace *= 1 + skillBonus;
+            U.risk *= 1 - skillBonus;
+            // recent accident makes the next shift more dangerous
+            if (F.B("recentAccident"))
+            {
+                U.risk *= 1.3f;
+                U.note = (U.note.Length > 0 ? U.note + " " : "") + "You’re still shaking from the last accident. The ground knows it.";
+            }
+            // very low morale makes mistakes more likely
+            if (S.morale < 30)
+            {
+                U.risk *= 1.15f;
+            }
         }
 
         static void MountShift(ShiftState U)
@@ -191,6 +240,8 @@ namespace CopperCamp
         {
             if (U.over) return;
             U.over = true;
+            if (forced == "accident") F.Set("recentAccident", true);
+            S.bestLoads = Math.Max(S.bestLoads, Round(U.prog * 100));
             float sm = U.stance == "push" ? 1.12f : U.stance == "careful" ? .92f : 1f;
             float payMult = Clamp((.7f + .5f * U.prog) * sm * U.payBonus, .55f, 1.45f);
             float lungMult = Clamp((.5f + U.dust / 900f) * (U.stance == "careful" ? .9f : 1f), .4f, 1.4f);
@@ -228,7 +279,7 @@ namespace CopperCamp
                     U.ph = "swing"; U.target = Math.Max(7, 10 - (int)Math.Floor(S.skill / 2)); break;
                 case "tram":
                     U.buttons = new List<ShiftButton> { new ShiftButton { id = "main", label = "HOLD TO PUSH", hold = true, main = true }, new ShiftButton { id = "aux", label = "SPRAG — BRAKE (hold B)", hold = true } };
-                    U.target = 4; break;
+                    U.target = Math.Max(3, 5 - (int)Math.Floor(S.skill / 2)); break;
             }
             foreach (var b in U.buttons) U.labels[b.id] = b.label;
         }
@@ -266,7 +317,7 @@ namespace CopperCamp
             if (U.stuck > 0) { U.stuck--; U.jam = Math.Max(0, U.jam - .02f); if (U.stuck == 0) U.msg = "She frees up."; return; }
             if (U.In("main"))
             {
-                U.prog += (.00145f + S.skill * .0001f) * U.pace * U.boost; U.dust++; U.lastNoise = U.t; U.jam += .0048f * U.pace * U.boost;
+                U.prog += (.00145f + S.skill * .0001f) * U.pace * U.boost; U.dust++; U.lastNoise = U.t; U.jam += .0048f * U.pace * U.boost * (1 - S.skill * .03f);
                 if (U.jam >= 1) { U.jam = 1; U.stuck = 50; U.msg = "The steel binds in the hole. Rock it loose."; Sfx("thud"); }
             }
             else U.jam = Math.Max(0, U.jam - .022f);
@@ -312,7 +363,7 @@ namespace CopperCamp
             heat:
             if (U.kind == "hotmuck")
             {
-                U.heat += (U.ph == "ready" ? .00044f : .00075f) * (1 + U.fatigue * .5f) * U.pace;
+                U.heat += (U.ph == "ready" ? .00044f : .00075f) * (1 + U.fatigue * .5f) * U.pace * U.heatMult;
                 if (U.Taps("aux") > 0)
                 {
                     U.taps["aux"] = 0;
@@ -329,9 +380,11 @@ namespace CopperCamp
                 U.tt += U.pace * U.boost * (1 + U.fatigue * .2f); U.x = (float)Math.Sin(U.tt * .04f);
                 if (U.Taps("main") > 0)
                 {
-                    U.taps["main"] = 0; float e = Math.Abs(U.x), q = e < .14f ? 1f : e < .32f ? .65f : .25f; U.sets++; U.prog += q / U.target;
-                    if (e >= .32f) { U.crooked++; U.risk *= 1.18f; U.msg = "Crooked. She’ll hold, but the back doesn’t like it."; }
-                    else U.msg = e < .14f ? "Plumb. The cap beam sits like it grew there." : "Close enough for the Company.";
+                    U.taps["main"] = 0; float e = Math.Abs(U.x);
+                    float perfectW = .14f + S.skill * .01f, goodW = .32f + S.skill * .02f;
+                    float q = e < perfectW ? 1f : e < goodW ? .65f : .25f; U.sets++; U.prog += q / U.target;
+                    if (e >= goodW) { U.crooked++; U.risk *= 1.18f; U.msg = "Crooked. She’ll hold, but the back doesn’t like it."; }
+                    else U.msg = e < perfectW ? "Plumb. The cap beam sits like it grew there." : "Close enough for the Company.";
                     U.res = q >= 1 ? "perfect" : q > .5f ? "good" : "crooked"; U.ph = "hammer"; U.hammer = 0; Sfx("maul");
                 }
             }
@@ -360,7 +413,8 @@ namespace CopperCamp
                 if (U.hit[i] == 0 && U.pos > U.zones[i])
                 {
                     U.hit[i] = 1;
-                    if (U.v > U.lim[i] + .15f)
+                    float derailMargin = .15f + S.skill * .02f;
+                    if (U.v > U.lim[i] + derailMargin)
                     {
                         U.derails++; U.stuck = 100; U.prog = Math.Max(0, U.prog - .04f);
                         U.msg = "She jumps the rails on the curve. Two men and a jack to put her back."; Sfx("derail");

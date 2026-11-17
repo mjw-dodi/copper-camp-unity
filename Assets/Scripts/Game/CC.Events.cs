@@ -346,6 +346,50 @@ namespace CopperCamp
                     Ch("Report it to the police", "They laugh.", () => { S.money -= Math.Min(60, S.money); Apply(new Fx { morale = -10, health = -6 }); Log("Rolled in the district."); LeisurePhase(); }),
                     Ch("Go looking for the man", null, () => { S.money -= Math.Min(60, S.money); Apply(new Fx { health = -6 }); Fight("the man with your coat", LeisurePhase, new Fx { money = 60 }); })), new Opts { loc = "mercury", dark = true });
             } },
+            // 28
+            new GameEvent { title = "The Company picnic", cool = 8, when = () => S.year >= 1908 && S.season == 1 && S.o.id != "chinese", run = () =>
+            {
+                Render("The Company picnic", "<p>The Company puts on a picnic at Columbia Gardens: free food, a band, and a man in a good suit telling you the Company is your friend. The union men stand at the back with their arms folded. It is a question of whether you eat.</p>", L(
+                    Ch("Eat and listen", "Free food, and a little warmth from the Company.", () => { Apply(new Fx { morale = 8, heat = -5 }); Log("Attended the Company picnic."); LeisurePhase(); }),
+                    Ch("Eat and leave early", null, () => { Apply(new Fx { morale = 3 }); LeisurePhase(); }),
+                    Ch("Stand with the union men", "The Company notices.", () => { Apply(new Fx { rep = 5, heat = 5 }); LeisurePhase(); })), new Opts { loc = "gardens" });
+            } },
+            // 29
+            new GameEvent { title = "A Finnish wedding", at = "finntown", cool = 10, when = () => S.o.id == "finnish" || S.rep > 40, run = () =>
+            {
+                Render("A Finnish wedding", "<p>There is a wedding at the Finn hall and you are invited because somebody's cousin knows your cousin. The sauna is going, the accordion is out, and the one-big-union talk is louder than the music. It is a question of how long you stay.</p>", L(
+                    Ch("Stay for the dancing", null, () => { Apply(new Fx { morale = 10, rep = 4 }); Log("Danced at a Finnish wedding."); LeisurePhase(); }),
+                    Ch("Help serve the coffee", "The women run the kitchen; the men run the talk.", () => { Apply(new Fx { morale = 5, rep = 2 }); LeisurePhase(); }),
+                    Ch("Slip out before the toasts", null, LeisurePhase)), new Opts { loc = "finntown" });
+            } },
+            // 30
+            new GameEvent { title = "The railroad strike", cool = 12, when = () => S.year == 1910 && S.season == 1, run = () =>
+            {
+                Render("The railroad strike", "<p>The Milwaukee Road men are out and the trestle south of town is blocked with overturned cars. Trains aren't running, mail is late, and the Company is hiring scabs at double pay to keep the copper moving. You can earn good money doing a bad thing.</p>", L(
+                    Ch("Strike with the railroad men", "Union standing up, Company suspicion up.", () => { Apply(new Fx { rep = 8, heat = 10, morale = 5 }); Log("Walked the Milwaukee Road picket line."); LeisurePhase(); }),
+                    Ch("Take the scab job", "Double pay for breaking the strike.", () => { S.money += 40; Apply(new Fx { heat = 15, rep = -8, morale = -5 }); Log("Took scab pay on the Milwaukee Road."); LeisurePhase(); }, cost: -40),
+                    Ch("Stay out of it", null, LeisurePhase)), new Opts { loc = "trestle", dark = true });
+            } },
+            // 31
+            new GameEvent { title = "Chinese New Year", at = "chinatown", cool = 8, when = () => S.o.id == "chinese" && S.season == 0, run = () =>
+            {
+                Render("Chinese New Year", "<p>China Alley is hung with red paper and the drums are going all night. Old Chin has a table set for the whole alley and a bottle of the good rice wine. It is a question of how much of yourself you leave at the door.</p>", L(
+                    Ch("Drink and dance", "The whole alley knows your face now.", () => { Apply(new Fx { morale = 12, rep = 5 }); Log("Celebrated Chinese New Year in China Alley."); LeisurePhase(); }),
+                    Ch("Help wash the dishes", "The women run the kitchen; the men run the talk.", () => { Apply(new Fx { morale = 5, rep = 2 }); LeisurePhase(); }),
+                    Ch("Slip out before midnight", null, LeisurePhase)), new Opts { loc = "chinatown" });
+            } },
+            // 32
+            new GameEvent { title = "The dance hall fire", at = "mercury", cool = 15, when = () => S.year >= 1911 && S.year <= 1914, run = () =>
+            {
+                Render("The dance hall fire", "<p>The Casino on Mercury Street catches fire during the Saturday night dance. The exits are blocked and the smoke is black. You can run for the door or go back in for somebody you don't know.", L(
+                    Ch("Run for the door", "You live. The hall doesn't.", () => { Apply(new Fx { health = -5, morale = -10 }); Log("Escaped the Casino fire."); LeisurePhase(); }),
+                    Ch("Go back in for the band", "The band is still playing.", () =>
+                    {
+                        if (Rand() < .6f) { Apply(new Fx { health = -15, morale = 10, rep = 8 }); Log("Saved the Casino band."); Render("The band", "<p>You come out with the cornet player over your shoulder and your coat on fire. The band plays 'A Hot Time in the Old Town' as you go.</p>", L(Ch("Go on", null, LeisurePhase)), new Opts { loc = "mercury", dark = true }); }
+                        else { Apply(new Fx { health = -30, morale = 5 }); Log("Burned in the Casino fire."); LeisurePhase(); }
+                    }),
+                    Ch("Stand outside and watch", "You don't go in. You don't forget it either.", () => { Apply(new Fx { morale = -8 }); LeisurePhase(); })), new Opts { loc = "mercury", dark = true });
+            } },
         };
 
         // ====================== FIGHTS ======================

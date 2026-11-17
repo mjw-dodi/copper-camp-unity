@@ -100,6 +100,8 @@ namespace CopperCamp
         public string bossName = "Foreman Dan Kearns";
         public string pendingPlace;
         public bool ended;
+        public int bestSeasonPay;
+        public int bestLoads;
         public Dictionary<int, int> ev = new Dictionary<int, int>();   // JS S.flags.ev: event index -> turn fired
         public List<string> brkRecent = new List<string>();            // JS S.flags.brkRecent
 
@@ -264,5 +266,6 @@ namespace CopperCamp
         void SaveText(string text);                   // null = delete
         string LoadText();
         string AskName();                             // the name typed on the title screen
+        void RebuildUI();                             // rebuild the UI after settings change
     }
 }

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using UnityEngine;
 
 namespace CopperCamp
 {
@@ -45,11 +46,81 @@ namespace CopperCamp
                 ch.Add(Ch(o.name + " — " + o.where, o.desc + (sel == o.id ? "<br><em>" + o.perk + "</em>" : ""), () => { sel = o.id; FocusOn(o.home); Title(); }));
             if (saved != null) ch.Add(Ch("Continue as " + saved.name + ", " + SEASONS[saved.season] + " " + saved.year, saved.o.name + ", from " + saved.o.where + ". $" + saved.money + " saved.", () => Resume(saved)));
             ch.Add(Ch("Step off the train", sel != null ? "" : "Pick an origin first.", () => NewGame(ORIGINS.First(o => o.id == sel), (UI?.AskName() ?? "").Trim()), disabled: sel == null));
+            ch.Add(Ch("How to play", "The season loop, the mines, and what the stats mean.", () => HowToPlay()));
+            ch.Add(Ch("Settings", "Volume, text size, motion, and color options.", () => SettingsPhase()));
+            ch.Add(Ch("Credits", "Who made this and where the pieces came from.", () => Credits()));
             Render("Copper Camp", body, ch);
             scene.mode = "photo"; scene.caption = "The Butte Hill, 1906 — an AI-generated view in the style of an old photograph.";
         }
 
-        public static void NewGame(Origin o, string name)
+        public static void HowToPlay()
+        {
+            TitleMode = false;
+            string body = "<p><b>The season loop.</b> Each season you work up to three shifts, then spend the evening in town, then sleep. Twelve years — forty-eight seasons — and the hill decides what kind of man you are.</p>"
+                + "<p><b>The mines.</b> Pick a job in the dry room. Risky jobs pay more and fill your lungs with dust. Each shift is a short game: shovel, drill, set timber, or push the ore car. Listen to the ground — when the timbers creak, ease off or the back comes down.</p>"
+                + "<p><b>The town.</b> Walk Uptown, eat at the boarding house, drink at the M&M, sit in on the union meeting, or send money home. Your choices change your health, lungs, morale, reputation, and the Company’s suspicion of you.</p>"
+                + "<p><b>The stats.</b> Health keeps you alive. Lungs fill with rock dust. Morale keeps you sane. Reputation is standing with the men. Suspicion is the Company watching you.</p>"
+                + "<p class=\"note\">Press number keys to pick choices. Space / click / tap drives the shift games. B or Left Shift is the second button.</p>";
+            var ch = new List<Choice>();
+            if (S != null && !S.ended)
+                ch.Add(Ch("Back to the game", null, () =>
+                {
+                    if (S.phase == "work") WorkPhase();
+                    else if (S.phase == "worked") EventPhase();
+                    else if (S.phase == "end") NextSeason();
+                    else LeisurePhase();
+                }));
+            else
+                ch.Add(Ch("Back to the title", null, Title));
+            ch.Add(Ch("Step off the train", sel != null ? "" : "Pick an origin first.", () => NewGame(ORIGINS.First(o => o.id == sel), (UI?.AskName() ?? "").Trim()), disabled: sel == null));
+            Render("How to play", body, ch);
+            scene.mode = "photo"; scene.caption = "The Butte Hill, 1906 — an AI-generated view in the style of an old photograph.";
+        }
+
+        public static void SettingsPhase()
+        {
+            TitleMode = false;
+            string body = "<p>These settings are saved on this device.</p>";
+            var ch = new List<Choice>
+            {
+                Ch("Music volume: " + Mathf.RoundToInt(Settings.MusicVolume * 100) + "%", null, () => { Settings.MusicVolume = Settings.MusicVolume >= .99f ? 0f : Settings.MusicVolume + .25f; Settings.Save(); SettingsPhase(); }),
+                Ch("Sound effects: " + Mathf.RoundToInt(Settings.SfxVolume * 100) + "%", null, () => { Settings.SfxVolume = Settings.SfxVolume >= .99f ? 0f : Settings.SfxVolume + .25f; Settings.Save(); SettingsPhase(); }),
+                Ch("Text size: " + (Settings.TextSize == 0 ? "Small" : Settings.TextSize == 1 ? "Normal" : "Large"), null, () => { Settings.TextSize = (Settings.TextSize + 1) % 3; Settings.Save(); UI?.RebuildUI(); SettingsPhase(); }),
+                Ch("Reduced motion: " + (Settings.ReducedMotion ? "On" : "Off"), "Disables camera shake and reduces particle motion.", () => { Settings.ReducedMotion = !Settings.ReducedMotion; Settings.Save(); SettingsPhase(); }),
+                Ch("Colorblind palette: " + (Settings.Colorblind ? "On" : "Off"), "Uses blue/orange instead of green/red for good/bad.", () => { Settings.Colorblind = !Settings.Colorblind; Settings.Save(); SettingsPhase(); }),
+                Ch("High contrast: " + (Settings.HighContrast ? "On" : "Off"), "Brightens text and panel borders.", () => { Settings.HighContrast = !Settings.HighContrast; Settings.Save(); UI?.RebuildUI(); SettingsPhase(); }),
+                Ch("How to play", "The season loop, the mines, and what the stats mean.", () => HowToPlay()),
+            };
+            if (S != null && !S.ended)
+                ch.Add(Ch("Back to the game", null, () =>
+                {
+                    if (S.phase == "work") WorkPhase();
+                    else if (S.phase == "worked") EventPhase();
+                    else if (S.phase == "end") NextSeason();
+                    else LeisurePhase();
+                }));
+            else
+                ch.Add(Ch("Back to the title", null, Title));
+            Render("Settings", body, ch);
+            scene.mode = "photo"; scene.caption = "The Butte Hill, 1906 — an AI-generated view in the style of an old photograph.";
+        }
+
+        public static void Credits()
+        {
+            TitleMode = false;
+            string body = "<p><b>Copper Camp</b> — a Unity 6 remake of the browser game.</p>"
+                + "<p><b>Game design & code:</b> Mike Williams</p>"
+                + "<p><b>Mine textures:</b> Poly Haven (CC0)</p>"
+                + "<p><b>Font:</b> DejaVu Serif</p>"
+                + "<p><b>Photos & portraits:</b> AI-generated in the style of period photographs</p>"
+                + "<p><b>Sound & music:</b> Generated with ElevenLabs</p>"
+                + "<p class=\"note\">Butte, Montana, 1906. The richest hill on earth.</p>";
+            var ch = L(Ch("Back to the title", null, Title));
+            Render("Credits", body, ch);
+            scene.mode = "photo"; scene.caption = "The Butte Hill, 1906 — an AI-generated view in the style of an old photograph.";
+        }
+
+        public static void NewGame(Origin o, string name, bool veteran = false)
         {
             name = Regex.Replace(name ?? "", "[<>&\"\\\\]", "");
             name = Regex.Replace(name, @"\s+", " ").Trim();
@@ -61,6 +132,14 @@ namespace CopperCamp
                 health = o.health, lungs = o.lungs, morale = o.morale, money = (int)o.money, rep = o.rep, heat = 0, skill = o.skill,
                 card = false, blacklisted = false, strike = false, halfpay = false, sent = 0, fights = 0, job = null, phase = "work",
             };
+            if (veteran)
+            {
+                S.skill = Clamp(S.skill + 2, 0, 8);
+                S.money += 40;
+                S.health = Clamp(S.health - 15, 1, 100);
+                S.morale = Clamp(S.morale - 10, 1, 100);
+                Log("You come back to the hill with the Company's file still open.");
+            }
             scene.walk = null; scene.mode = "hill";
             Log("You step off the Northern Pacific into the smoke.");
             WorkPhase();
@@ -84,7 +163,7 @@ namespace CopperCamp
             if (ScriptedOnce(Key(), PRE)) return;
             bool cn = S.o.id == "chinese"; var jobs = cn ? JOBS_CN : JOBS;
             int sh = S.shifts;
-            string intro = "<p>" + (sh == 0 ? Flavor() : "You are back at the dry room with the day’s dust still in your collar. So far this season: <b>$" + S.seasonPay + "</b> earned.") + "</p><p><b>Where will you work" + (sh != 0 ? " your next shift" : " this season") + "?</b> <span class=\"note\">A season is three shifts. Try a different job each time and see how they differ" + (S.year == 1906 && S.season == 0 ? ". Higher pay means worse air; skill makes you safer" : "") + ".</span></p>";
+            string intro = "<p>" + (sh == 0 ? Flavor() : "You are back at the dry room with the day’s dust still in your collar. So far this season: <b>$" + S.seasonPay + "</b> earned.") + (S.bestSeasonPay > 0 ? " <span class=\"note\">Best season: $" + S.bestSeasonPay + ". Best shift: " + S.bestLoads + "%.</span>" : "") + "</p><p><b>Where will you work" + (sh != 0 ? " your next shift" : " this season") + "?</b> <span class=\"note\">A season is three shifts. Try a different job each time and see how they differ" + (S.year == 1906 && S.season == 0 ? ". Higher pay means worse air; skill makes you safer" : "") + ".</span></p>";
             if (F.B("jailed"))
             {
                 F.Set("jailed", false);
@@ -139,6 +218,15 @@ namespace CopperCamp
             if (S.payTip == j.id && TurnIdx() <= S.payTipTurn + 1) p *= 1.1;
             if (S.halfpay) p *= .5;
             if (S.o.id == "chinese" && F.B("boycott") && j.id != "idle") p *= .6;
+            // origin-specific underground advantages
+            if (S.o.id == "cornish" && j.id == "mountaincon") p *= 1.15;   // Cousin Jacks know square-set timbering
+            if (S.o.id == "finnish" && j.id == "speculator") p *= 1.1;    // Finns work the hot, deep levels
+            if (S.o.id == "italian" && j.id == "leonard") p *= 1.1;       // Meaderville men know the hot mines
+            if (S.o.id == "serb" && j.id == "mountaincon") p *= 1.05;     // strong backs for heavy timber
+            if (S.o.id == "irish" && j.id == "anaconda") p *= 1.05;       // Gulch men know the Neversweat
+            // counter jobs: origin networks help
+            if (S.o.id == "chinese" && (j.id == "pekin" || j.id == "laundry" || j.id == "herbs")) p *= 1.1;
+            if (S.o.id == "italian" && j.id == "hennessy") p *= 1.05;     // grocery connections
             return JsRoundD(p);
         }
 
@@ -272,7 +360,15 @@ namespace CopperCamp
                 }
                 else
                 {
-                    S.skill = Clamp(S.skill + (j.risk != 0 ? .3f / SHIFTS : 0), 0, 8);
+                    float skillGain = j.risk != 0 ? .3f / SHIFTS : 0;
+                    // origin-specific skill growth: you learn faster in jobs that match your background
+                    if (S.o.id == "cornish" && j.id == "mountaincon") skillGain *= 1.5f;
+                    if (S.o.id == "finnish" && j.id == "speculator") skillGain *= 1.4f;
+                    if (S.o.id == "italian" && j.id == "leonard") skillGain *= 1.3f;
+                    if (S.o.id == "serb" && j.id == "mountaincon") skillGain *= 1.2f;
+                    if (S.o.id == "irish" && j.id == "anaconda") skillGain *= 1.2f;
+                    if (S.o.id == "chinese" && (j.id == "pekin" || j.id == "laundry" || j.id == "herbs")) skillGain *= 1.3f;
+                    S.skill = Clamp(S.skill + skillGain, 0, 8);
                     float r = j.risk * (1 - S.skill * .04f) * (res.riskMult != 0 ? res.riskMult : 1) / SHIFTS;
                     html = "<p>" + Pick("Three shifts a day, seven days a week, and the rock never stops.", "The dry room steams. Your candle gutters in the bad air.", "Payday at the Company window; the line runs down the hill.") + " You draw <b>$" + pay + "</b> for the shift" + (res.payMult > 1.1f ? ", with the contract bonus for clean rounds" : res.payMult < .85f ? ", docked for short rounds" : "") + ".</p>";
                     if (res.forced == "accident" || (res.forced != "safe" && Rand() < r) || (res.forced == "safe" && Rand() < r * .25f))
@@ -551,6 +647,12 @@ namespace CopperCamp
             if (l.id == "union" && S.o.id == "irish") fx.rep = (fx.rep ?? 0) + 4;
             if (l.id == "district" && F.B("stool")) fx.morale -= 5;
             if (l.id == "study" && S.skill >= 7) fx.skill = null;
+            // origin-specific leisure bonuses
+            if (l.id == "church" && S.o.id == "irish") { fx.morale = (fx.morale ?? 0) + 4; fx.rep = (fx.rep ?? 0) + 2; }
+            if (l.id == "sauna" && S.o.id == "finnish") { fx.health = (fx.health ?? 0) + 6; fx.lungs = (fx.lungs ?? 0) + 2; }
+            if (l.id == "gardens" && S.o.id == "italian") { fx.morale = (fx.morale ?? 0) + 6; }
+            if (l.id == "herbs" && S.o.id == "chinese") { fx.skill = (fx.skill ?? 0) + .1f; }
+            if (l.id == "union" && S.o.id == "serb") { fx.rep = (fx.rep ?? 0) + 3; }
             Apply(fx); if (l.once) S.used.Add(l.id);
             Action after = () => EveningStep(l);
             if (l.run == "faro") { FaroRun(after); return; }
@@ -648,7 +750,7 @@ namespace CopperCamp
             if (S.o.id == "chinese" && (l.id == "union" || l.id == "secretary")) return null;
             if (l.id == "gun" && F.B("gun")) return null;
             if (l.id == "nell" && (F.B("nellGone") || RelGet("nell") == 0)) return null;
-            int cost = l.cost; if (l.id == "sauna" && S.o.id == "finnish") cost = 0; if (l.id == "board" && S.o.id == "italian") cost = 18;
+            int cost = l.cost; if (l.id == "sauna" && S.o.id == "finnish") cost = 0; if (l.id == "board" && S.o.id == "italian") cost = 18; if (l.id == "board" && S.o.id == "chinese") cost = 0;
             return new LeisureOpt { l = l, cost = cost };
         }
 
@@ -810,6 +912,7 @@ namespace CopperCamp
                 S.morale = 18; S.money = Math.Max(-99, S.money - 80); Apply(new Fx { health = -12 }); Log("Lost a season to the drink.");
                 html += "<div class=\"result bad\">You lose the season to the M&M. The bartender keeps a tab, the landlady keeps your room, and neither says anything when you come back. " + (F.I("binges") == 2 ? "The second time, the bartender says it: one more and he'll be pouring at your wake." : "Eighty dollars and a piece of your health.") + "</div>";
             }
+            if (S.seasonPay > S.bestSeasonPay) S.bestSeasonPay = S.seasonPay;
             var ch = L(Ch("Next season", null, NextSeason));
             if (S.money >= 2000 && S.year >= 1910 && !F.B("house"))
                 ch.Add(Ch("Buy a house on the Flat", "A frame house with a yard on the Flat, south of the creek, out from under the smoke. No more board; you keep working, because everyone does.", () =>
@@ -863,8 +966,16 @@ namespace CopperCamp
                     loc = S.o.home; dark = false; break;
             }
             Log(t + ".");
+            var choices = L(
+                Ch("Start again", null, () => { S = null; scene.fire = false; Title(); }),
+                Ch("New Game+ (veteran)", "Start over with the same origin, but the hill remembers you: +2 skill, +$40, -15 health, -10 morale.", () =>
+                {
+                    var o = S.o;
+                    S = null; scene.fire = false;
+                    NewGame(o, (UI?.AskName() ?? "").Trim(), true);
+                }));
             Render(t, b + "<p class=\"note\">" + Span() + " in the camp. Started as " + S.o.name + ", from " + S.o.where + ".</p>",
-                L(Ch("Start again", null, () => { S = null; scene.fire = false; Title(); })), new Opts { loc = loc, dark = dark });
+                choices, new Opts { loc = loc, dark = dark });
         }
     }
 }
